@@ -63,7 +63,7 @@ app.use('/api', async (req, res) => {
 
 
 // Menyajikan file statis dari folder 'dist'
-const distPath = path.join(process.cwd(), 'dist');
+const distPath = path.join(__dirname, '..', 'dist');
 app.use(express.static(distPath));
 
 // Rute catch-all untuk menyajikan index.html (untuk React Router)
