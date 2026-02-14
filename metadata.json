@@ -1,0 +1,5 @@
+{
+  "name": "Indikrea Hosting Management",
+  "description": "A web application for managing hosting, domains, and billing for clients. It features a dashboard for analytics, website management, a WordPress credentials vault, and an invoice system, with role-based access for admins and clients.",
+  "requestFramePermissions": []
+}
