@@ -12,10 +12,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-const host = process.env.OP_DB_HOST || '193.203.166.17';
-const user = process.env.OP_DB_USER || 'u573188607_hosting';
-const password = process.env.OP_DB_PASS || 'ObB2^5rW';
-const database = process.env.OP_DB_NAME || 'u573188607_hosting';
+const host = process.env.OP_DB_HOST;
+const user = process.env.OP_DB_USER;
+const password = process.env.OP_DB_PASS;
+const database = process.env.OP_DB_NAME;
 
 let dbPool = null;
 async function ensureDb() {
@@ -25,40 +25,19 @@ async function ensureDb() {
   return dbPool;
 }
 
-function readBody(req) {
-  return new Promise((resolve) => {
-    let body = '';
-    req.on('data', (chunk) => { body += chunk; });
-    req.on('end', () => resolve(body));
-  });
-}
-
 function json(res, status, data) {
   res.status(status).json(data);
 }
 
 // Middleware untuk API
+app.use(express.json({ limit: '2mb' }));
 app.use('/api', async (req, res) => {
-    const parsedUrl = parseUrl(req.url, true);
-    const pathname = parsedUrl.pathname;
-    let payload = {};
+    const pathname = parseUrl(req.url, true).pathname || '/';
+    const payload = req.body || {};
 
-    if (req.method === 'POST') {
-        try {
-            const body = await readBody(req);
-            payload = JSON.parse(body);
-        } catch (e) {
-            return json(res, 400, { success: false, message: 'Invalid JSON payload.' });
-        }
-    }
-
-    if (pathname.startsWith('/data')) {
-        await handleGetData(req, res, payload);
-    } else if (pathname.startsWith('/update')) {
-        await handleUpdateData(req, res, payload);
-    } else {
-        json(res, 404, { success: false, message: 'API endpoint not found.' });
-    }
+    if (pathname.startsWith('/data')) return handleGetData(req, res, payload);
+    if (pathname.startsWith('/update')) return handleUpdateData(req, res, payload);
+    return json(res, 404, { success: false, message: 'API endpoint not found.' });
 });
 
 
@@ -390,7 +369,7 @@ async function handleUpdateData(req, res, payload) {
   return json(res, 400, { success: false, message: 'Invalid action.' })
 }
 
-const port = process.env.PORT || process.env.API_PORT || 8787;
-server.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
+const PORT = Number(process.env.PORT) || 3000;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server listening on port ${PORT}`);
 });
