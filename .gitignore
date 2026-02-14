@@ -1,2 +1,28 @@
+# Dependencies
 /node_modules
 /dist
+
+# IDE and Editor folders
+.vscode/
+.trae/
+
+# Temporary and session files
+*.session.sql
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SQL files
+*.sql
+
+# PHP files
+*.php
+
+# Misc
+public_html/
+.env
+.env.local
+.env.*.local
+
