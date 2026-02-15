@@ -31,13 +31,13 @@ function json(res, status, data) {
 
 // Middleware untuk API
 app.use(express.json({ limit: '2mb' }));
-app.use('/api', async (req, res) => {
-    const pathname = parseUrl(req.url, true).pathname || '/';
-    const payload = req.body || {};
 
-    if (pathname.startsWith('/data')) return handleGetData(req, res, payload);
-    if (pathname.startsWith('/update')) return handleUpdateData(req, res, payload);
-    return json(res, 404, { success: false, message: 'API endpoint not found.' });
+app.post('/api/data', (req, res) => {
+    handleGetData(req, res, req.body || {});
+});
+
+app.post('/api/update', (req, res) => {
+    handleUpdateData(req, res, req.body || {});
 });
 
 
