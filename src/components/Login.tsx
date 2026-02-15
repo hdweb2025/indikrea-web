@@ -34,10 +34,13 @@ const Login: React.FC<LoginProps> = ({ userType }) => {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/login.php`, {
+            const response = await fetch(`${API_BASE_URL}/update`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({
+                    action: 'login',
+                    payload: { username, password }
+                })
             });
 
             const data = await response.json();

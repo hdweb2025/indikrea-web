@@ -1,5 +1,5 @@
 import { User, Website, Client, Invoice, HostingPackage, Registration, SiteSettings } from '../data/mockData';
-export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8787/api';
+export const API_BASE_URL = '/api';
 
 export interface ApiResponseData {
     websites: Website[];
@@ -18,10 +18,10 @@ export interface PublicApiResponseData {
 
 export const fetchPublicData = async (): Promise<PublicApiResponseData> => {
     // No user object is needed for public data
-    const response = await fetch(`${API_BASE_URL}/get_data.php`, {
+    const response = await fetch(`${API_BASE_URL}/data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ public: true }), // Send a flag for public data
+        body: JSON.stringify({ action: 'get_public_data' }),
     });
 
     if (!response.ok) {
@@ -49,10 +49,10 @@ const getAuthenticatedUser = (): User => {
 export const fetchDashboardData = async (): Promise<ApiResponseData> => {
     const user = getAuthenticatedUser();
 
-    const response = await fetch(`${API_BASE_URL}/get_data.php`, {
+    const response = await fetch(`${API_BASE_URL}/data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(user),
+        body: JSON.stringify({ user, action: 'get_dashboard_data' }),
     });
 
     if (!response.ok) {
@@ -76,7 +76,7 @@ const updateData = async (action: string, payload: any) => {
     // Server-side will perform the real permission checks (superadmin/admin/support).
     // Client does not block actions here to keep UI consistent with server policy.
 
-    const response = await fetch(`${API_BASE_URL}/update_data.php`, {
+    const response = await fetch(`${API_BASE_URL}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user, action, payload }),

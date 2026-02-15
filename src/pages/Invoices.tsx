@@ -197,10 +197,10 @@ const Invoices: React.FC<InvoicesProps> = ({ user }) => {
         setConfirmMessage(msg);
         setConfirmAction(() => async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/update_invoice.php`, {
+                const response = await fetch(`${API_BASE_URL}/update`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: invoiceId, action })
+                    body: JSON.stringify({ action: 'update_invoice', payload: { id: invoiceId, action } })
                 });
                 const result = await response.json();
     
