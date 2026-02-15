@@ -1,6 +1,5 @@
 # Dependencies
 /node_modules
-/dist
 
 # IDE and Editor folders
 .vscode/
