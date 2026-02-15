@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { User, Invoice, Client, Website, mockInvoiceTemplate } from '../data/mockData';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Client, Invoice, User, Website } from '../data/mockData';
 import Modal from '../components/Modal';
-import { fetchDashboardData, API_BASE_URL } from '../utils/api';
+import { API_BASE_URL, fetchDashboardData } from '../utils/api';
 
 
 declare global {
