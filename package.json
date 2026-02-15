@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp server/api-server.js dist/server.js && cp package.json dist/package.json",
     "preview": "vite preview",
     "api": "node server/api-server.js",
     "start": "node server/api-server.js"
