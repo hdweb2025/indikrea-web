@@ -79,7 +79,7 @@ async function handleGetData(req, res, payload) {
           else { cursor[p] = cursor[p] || {}; cursor = cursor[p] }
         }
       }
-      const packages = await pool.query("SELECT * FROM packages");
+      const packages = await pool.query("SELECT * FROM hosting_packages");
       return json(res, 200, { success: true, data: { settings: settingsObj, hostingPackages: packages[0] } });
     } catch (e) {
       console.error('Error fetching public data:', e);
