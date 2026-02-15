@@ -79,7 +79,7 @@ async function handleGetData(req, res, payload) {
           else { cursor[p] = cursor[p] || {}; cursor = cursor[p] }
         }
       }
-      const packages = await pool.query("SELECT * FROM hosting_packages WHERE status = 'Active' ORDER BY `order` ASC");
+      const packages = await pool.query("SELECT * FROM packages");
       return json(res, 200, { success: true, data: { settings: settingsObj, hostingPackages: packages[0] } });
     } catch (e) {
       console.error('Error fetching public data:', e);
@@ -94,7 +94,7 @@ async function handleGetData(req, res, payload) {
         const websites = await pool.query("SELECT w.*, c.fullName as clientName, p.name as packageName FROM websites w LEFT JOIN clients c ON w.clientId = c.id LEFT JOIN hosting_packages p ON w.packageId = p.id ORDER BY w.id DESC");
         const clients = await pool.query("SELECT * FROM clients ORDER BY id DESC");
         const invoices = await pool.query("SELECT i.*, c.fullName as clientName, w.domain FROM invoices i LEFT JOIN clients c ON i.clientId = c.id LEFT JOIN websites w ON i.websiteId = w.id ORDER BY i.id DESC");
-        const hostingPackages = await pool.query("SELECT * FROM hosting_packages ORDER BY `order` ASC");
+        const hostingPackages = await pool.query("SELECT * FROM hosting_packages ORDER BY monthly_price_idr ASC");
         const registrations = await pool.query("SELECT r.*, p.name as packageName FROM registrations r LEFT JOIN hosting_packages p ON r.packageId = p.id ORDER BY r.id DESC");
         let settingsObj = {};
         const data = {
