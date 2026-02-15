@@ -54,6 +54,7 @@ app.get(/^\/(?!api).*/, (req, res) => {
 async function handleGetData(req, res, payload) {
   const pool = await ensureDb();
   const action = payload.action;
+  console.log(`[handleGetData] Action: ${action}`);
 
   if (action === 'get_public_data') {
     let settingsObj = {};
