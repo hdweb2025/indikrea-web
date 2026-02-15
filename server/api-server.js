@@ -42,12 +42,11 @@ app.use('/api', async (req, res) => {
 
 
 // Menyajikan file statis dari folder 'dist'
-const distPath = path.join(__dirname, '..', 'dist');
-app.use(express.static(distPath));
+app.use(express.static(__dirname));
 
 // Rute catch-all untuk menyajikan index.html (untuk React Router)
 app.get(/^\/(?!api).*/, (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 
