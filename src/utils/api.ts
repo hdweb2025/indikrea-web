@@ -1,5 +1,5 @@
 import { User, Website, Client, Invoice, HostingPackage, Registration, SiteSettings } from '../data/mockData';
-export const API_BASE_URL = '/api';
+export const API_BASE_URL = 'https://api.indikrea.id/api';
 
 export interface ApiResponseData {
     websites: Website[];
