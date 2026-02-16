@@ -3,15 +3,61 @@ import { SiteSettings, mockSiteSettings } from '../data/mockData';
 import { usePublicData } from '../contexts/PublicDataContext';
 import { updateSiteSettings } from '../utils/api';
 
+const mergeSettings = (incoming: any): SiteSettings => {
+    const base = mockSiteSettings;
+    const src = (incoming || {}) as Partial<SiteSettings>;
+    return {
+        ...base,
+        ...src,
+        general: {
+            ...base.general,
+            ...(src.general || {})
+        },
+        navigation: {
+            ...base.navigation,
+            ...(src.navigation || {}),
+            headerLinks: src.navigation && src.navigation.headerLinks && src.navigation.headerLinks.length
+                ? src.navigation.headerLinks
+                : base.navigation.headerLinks
+        },
+        contact: {
+            ...base.contact,
+            ...(src.contact || {})
+        },
+        footer: {
+            ...base.footer,
+            ...(src.footer || {}),
+            linkColumns: src.footer && src.footer.linkColumns && src.footer.linkColumns.length
+                ? src.footer.linkColumns
+                : base.footer.linkColumns
+        },
+        packagesPage: {
+            ...base.packagesPage,
+            ...(src.packagesPage || {}),
+            faq: src.packagesPage && src.packagesPage.faq && src.packagesPage.faq.length
+                ? src.packagesPage.faq
+                : base.packagesPage.faq
+        },
+        company: {
+            ...base.company,
+            ...(src.company || {})
+        },
+        invoiceTemplate: {
+            ...base.invoiceTemplate,
+            ...(src.invoiceTemplate || {})
+        }
+    };
+};
+
 const SiteSettingsPage: React.FC = () => {
     const { settings: initialSettings, loading } = usePublicData();
     const [settings, setSettings] = useState<SiteSettings | null>(null);
 
     useEffect(() => {
-        if (initialSettings) {
-            setSettings(initialSettings);
-        } else if (!loading && !initialSettings) {
-            // Fallback to mock data if no settings from API (first time setup)
+        if (loading) return;
+        if (initialSettings && Object.keys(initialSettings as any).length > 0) {
+            setSettings(mergeSettings(initialSettings));
+        } else {
             setSettings(mockSiteSettings);
         }
     }, [initialSettings, loading]);
