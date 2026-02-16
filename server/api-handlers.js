@@ -50,6 +50,60 @@ function normalizeHostingPackages(rows) {
   });
 }
 
+function parseDiskUsageToMb(val) {
+  if (val == null) return 0;
+  if (typeof val === 'number') {
+    if (!isNaN(val) && val >= 0) return val;
+    return 0;
+  }
+  let s = String(val).trim();
+  if (!s) return 0;
+  const match = s.match(/^([\d.,]+)\s*([A-Za-z]+)?$/);
+  if (!match) {
+    const num = parseFloat(s.replace(',', '.'));
+    return !isNaN(num) && num >= 0 ? num : 0;
+  }
+  const num = parseFloat(match[1].replace(',', '.'));
+  if (isNaN(num) || num < 0) return 0;
+  const unitRaw = (match[2] || 'MiB').toUpperCase();
+  if (unitRaw.startsWith('T')) return num * 1024 * 1024;
+  if (unitRaw.startsWith('G')) return num * 1024;
+  if (unitRaw.startsWith('K')) return num / 1024;
+  return num;
+}
+
+function normalizeWebsites(rows) {
+  return rows.map((row) => {
+    const diskVal = row.disk_usage_mb != null ? row.disk_usage_mb : (row.disk_usage != null ? row.disk_usage : null);
+    const disk_usage_mb = parseDiskUsageToMb(diskVal);
+    let inodes = row.inodes;
+    inodes = typeof inodes === 'number' ? inodes : parseInt(inodes, 10);
+    if (isNaN(inodes) || inodes < 0) inodes = 0;
+    let parentId = row.parentId;
+    if (parentId === '' || parentId == null) parentId = null;
+    else {
+      const pid = parseInt(parentId, 10);
+      parentId = isNaN(pid) ? null : pid;
+    }
+    let package_id = row.package_id;
+    if (package_id !== undefined && package_id !== null) {
+      const pid = typeof package_id === 'number' ? package_id : parseInt(package_id, 10);
+      package_id = isNaN(pid) ? null : pid;
+    } else {
+      package_id = null;
+    }
+    const last_modified = row.last_modified || row.last_updated || row.lastUpdate || '';
+    return { 
+      ...row, 
+      disk_usage_mb, 
+      inodes, 
+      parentId,
+      last_modified,
+      package_id 
+    };
+  });
+}
+
 export async function handleGetData(req, res, payload) {
   const pool = await ensureDb();
   const action = payload.action;
@@ -154,17 +208,32 @@ export async function handleGetData(req, res, payload) {
           websiteCols.includes('client_id') ? 'client_id' :
           websiteCols.includes('client') ? 'client' :
           websiteCols[0] || 'id';
-        const colWebsitePackageId =
-          websiteCols.includes('packageId') ? 'packageId' :
+        const hasWebsitePackageCol =
+          websiteCols.includes('packageId') ||
+          websiteCols.includes('package_id') ||
+          websiteCols.includes('hosting_package_id');
+        const colWebsitePackageId = !hasWebsitePackageCol ? null :
+          (websiteCols.includes('packageId') ? 'packageId' :
           websiteCols.includes('package_id') ? 'package_id' :
           websiteCols.includes('hosting_package_id') ? 'hosting_package_id' :
-          websiteCols[0] || 'id';
+          null);
         const colWebsiteDomain =
           websiteCols.includes('domain') ? 'domain' :
           websiteCols.includes('domain_name') ? 'domain_name' :
           websiteCols.includes('url') ? 'url' :
           websiteCols.includes('hostname') ? 'hostname' :
           websiteCols[0] || 'id';
+
+        const colDiskUsage = 
+          websiteCols.includes('disk_usage_mb') ? 'disk_usage_mb' :
+          websiteCols.includes('diskUsageMb') ? 'diskUsageMb' :
+          websiteCols.includes('disk_usage') ? 'disk_usage' :
+          'disk_usage_mb';
+
+        const colInodes = 
+          websiteCols.includes('inodes') ? 'inodes' :
+          websiteCols.includes('inode_usage') ? 'inode_usage' :
+          'inodes';
 
         const invoiceColsRes = await pool.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices'");
         const invoiceCols = (invoiceColsRes?.[0] || []).map((r) => String(r.COLUMN_NAME));
@@ -179,11 +248,18 @@ export async function handleGetData(req, res, payload) {
           invoiceCols.includes('site_id') ? 'site_id' :
           invoiceCols[0] || 'id';
 
+        const selectWebsiteBase =
+          `SELECT w.*, 
+           w.\`${colDiskUsage}\` as disk_usage,
+           w.\`${colInodes}\` as inodes,
+           c.\`${colClientName}\` as clientName`;
+        const selectWebsitePackage = hasWebsitePackageCol && colWebsitePackageId
+          ? `, w.\`${colWebsitePackageId}\` as package_id`
+          : '';
         const websites = await pool.query(
-          `SELECT w.*, c.\`${colClientName}\` as clientName, p.name as packageName
+          `${selectWebsiteBase}${selectWebsitePackage}
            FROM websites w
            LEFT JOIN clients c ON w.\`${colWebsiteClientId}\` = c.id
-           LEFT JOIN hosting_packages p ON w.\`${colWebsitePackageId}\` = p.id
            ORDER BY w.id DESC`
         );
         const clients = await pool.query("SELECT * FROM clients ORDER BY id DESC");
@@ -198,7 +274,7 @@ export async function handleGetData(req, res, payload) {
         const registrations = await pool.query("SELECT r.*, p.name as packageName FROM registrations r LEFT JOIN hosting_packages p ON r.packageId = p.id ORDER BY r.id DESC");
         let settingsObj = {};
         const data = {
-            websites: websites[0],
+            websites: normalizeWebsites(websites[0] || []),
             clients: clients[0],
             invoices: invoices[0],
             hostingPackages: normalizeHostingPackages(hostingPackagesRes?.[0] || []),
@@ -213,8 +289,13 @@ export async function handleGetData(req, res, payload) {
               userCols.includes('last_login') ? 'last_login' :
               userCols.includes('last_login_at') ? 'last_login_at' :
               null;
+            const colClientId =
+              userCols.includes('clientId') ? 'clientId' :
+              userCols.includes('client_id') ? 'client_id' :
+              null;
             let selectUser =
               "id, username, email, role, status" +
+              (colClientId ? `, \`${colClientId}\` as clientId` : ", NULL as clientId") +
               (colLastLogin ? `, \`${colLastLogin}\` as lastLogin` : ", NULL as lastLogin");
             const users = await pool.query(`SELECT ${selectUser} FROM users ORDER BY id DESC`);
             data.users = users[0];
@@ -240,7 +321,67 @@ export async function handleUpdateData(req, res, payload) {
     return json(res, 403, { success: false, message: 'Permission denied.' });
   }
 
-  if (action === 'update_site_settings') {
+  if (action === 'update_client') {
+    if (!['superadmin','admin'].includes(role)) {
+      return json(res, 403, { success: false, message: 'Only admin/superadmin can update clients.' });
+    }
+    try {
+      const clientColsRes = await pool.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clients'"
+      );
+      const clientCols = (clientColsRes?.[0] || []).map((r) => String(r.COLUMN_NAME));
+      const colId = clientCols.includes('id') ? 'id' : clientCols[0];
+      const colName =
+        clientCols.includes('name') ? 'name' :
+        clientCols.includes('full_name') ? 'full_name' :
+        null;
+      const colEmail =
+        clientCols.includes('email') ? 'email' :
+        null;
+      const colPhone =
+        clientCols.includes('phone') ? 'phone' :
+        clientCols.includes('phone_number') ? 'phone_number' :
+        null;
+      const colStatus =
+        clientCols.includes('status') ? 'status' :
+        null;
+
+      const id = data.id;
+      if (!id) {
+        return json(res, 400, { success: false, message: 'Client id is required.' });
+      }
+
+      const sets = [];
+      const params = [];
+      if (colName && typeof data.name !== 'undefined') {
+        sets.push(`\`${colName}\` = ?`);
+        params.push(String(data.name || ''));
+      }
+      if (colEmail && typeof data.email !== 'undefined') {
+        sets.push(`\`${colEmail}\` = ?`);
+        params.push(String(data.email || ''));
+      }
+      if (colPhone && typeof data.phone !== 'undefined') {
+        sets.push(`\`${colPhone}\` = ?`);
+        params.push(String(data.phone || ''));
+      }
+      if (colStatus && typeof data.status !== 'undefined') {
+        sets.push(`\`${colStatus}\` = ?`);
+        params.push(String(data.status || 'Active'));
+      }
+      if (!sets.length) {
+        return json(res, 400, { success: false, message: 'No updatable fields provided.' });
+      }
+      params.push(id);
+      const sql = `UPDATE clients SET ${sets.join(', ')} WHERE \`${colId}\` = ? LIMIT 1`;
+      await pool.query(sql, params);
+
+      return json(res, 200, { success: true });
+    } catch (e) {
+      console.error('Error updating client:', e);
+      return json(res, 500, { success: false, message: 'Database error while updating client.' });
+    }
+  } else if (action === 'update_site_settings') {
     if (role !== 'superadmin') {
       return json(res, 403, { success: false, message: 'Only superadmin can update site settings.' });
     }
@@ -312,7 +453,137 @@ export async function handleUpdateData(req, res, payload) {
       console.error('Error updating site settings:', e);
       return json(res, 500, { success: false, message: 'Database error while updating site settings.' });
     }
-  }
+  } else if (action === 'update_user') {
+    if (role !== 'superadmin') {
+      return json(res, 403, { success: false, message: 'Only superadmin can update users.' });
+    }
+    try {
+      const userColsRes = await pool.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'"
+      );
+      const userCols = (userColsRes?.[0] || []).map((r) => String(r.COLUMN_NAME));
+      const colId = userCols.includes('id') ? 'id' : userCols[0];
+      const colName =
+        userCols.includes('name') ? 'name' :
+        userCols.includes('full_name') ? 'full_name' :
+        userCols.includes('fullName') ? 'fullName' :
+        null;
+      const colEmail =
+        userCols.includes('email') ? 'email' :
+        userCols.includes('mail') ? 'mail' :
+        null;
+      const colRole =
+        userCols.includes('role') ? 'role' :
+        userCols.includes('user_role') ? 'user_role' :
+        null;
+      const colStatus =
+        userCols.includes('status') ? 'status' :
+        userCols.includes('user_status') ? 'user_status' :
+        null;
+      const colClientId =
+        userCols.includes('clientId') ? 'clientId' :
+        userCols.includes('client_id') ? 'client_id' :
+        null;
+
+      const id = data.id;
+      if (!id) {
+        return json(res, 400, { success: false, message: 'User id is required.' });
+      }
+
+      const sets = [];
+      const params = [];
+      if (colName && typeof data.name !== 'undefined') {
+        sets.push(`\`${colName}\` = ?`);
+        params.push(String(data.name || ''));
+      }
+      if (colEmail && typeof data.email !== 'undefined') {
+        sets.push(`\`${colEmail}\` = ?`);
+        params.push(String(data.email || ''));
+      }
+      if (colRole && typeof data.role !== 'undefined') {
+        sets.push(`\`${colRole}\` = ?`);
+        params.push(String(data.role || 'client'));
+      }
+      if (colStatus && typeof data.status !== 'undefined') {
+        sets.push(`\`${colStatus}\` = ?`);
+        params.push(String(data.status || 'Active'));
+      }
+      if (colClientId && typeof data.clientId !== 'undefined') {
+        sets.push(`\`${colClientId}\` = ?`);
+        params.push(data.clientId || null);
+      }
+
+      if (!sets.length) {
+        return json(res, 400, { success: false, message: 'No updatable fields provided.' });
+      }
+
+      params.push(id);
+      const sql = `UPDATE users SET ${sets.join(', ')} WHERE \`${colId}\` = ? LIMIT 1`;
+      await pool.query(sql, params);
+
+      return json(res, 200, { success: true });
+    } catch (e) {
+      console.error('Error updating user:', e);
+      return json(res, 500, { success: false, message: 'Database error while updating user.' });
+    }
+  } else if (action === 'update_website_usage') {
+    if (!['superadmin','admin'].includes(role)) {
+      return json(res, 403, { success: false, message: 'Only admin/superadmin can update website usage.' });
+    }
+    try {
+      const websiteColsRes = await pool.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'websites'"
+      );
+      const websiteCols = (websiteCols?.[0] || []).map((r) => String(r.COLUMN_NAME));
+      const colId = websiteCols.includes('id') ? 'id' : websiteCols[0];
+      const colDiskUsage =
+        websiteCols.includes('disk_usage_mb') ? 'disk_usage_mb' :
+        websiteCols.includes('diskUsageMb') ? 'diskUsageMb' :
+        websiteCols.includes('disk_usage') ? 'disk_usage' :
+        null;
+      const colInodes =
+        websiteCols.includes('inodes') ? 'inodes' :
+        websiteCols.includes('inode_usage') ? 'inode_usage' :
+        null;
+      const colExpiry =
+        websiteCols.includes('expiry_date') ? 'expiry_date' :
+        websiteCols.includes('expiryDate') ? 'expiryDate' :
+        null;
+
+      const id = data.id;
+      if (!id) {
+        return json(res, 400, { success: false, message: 'Website id is required.' });
+      }
+
+      const sets = [];
+      const params = [];
+      if (colDiskUsage && typeof data.disk_usage_mb !== 'undefined') {
+        sets.push(`\`${colDiskUsage}\` = ?`);
+        params.push(data.disk_usage_mb || 0);
+      }
+      if (colInodes && typeof data.inodes !== 'undefined') {
+        sets.push(`\`${colInodes}\` = ?`);
+        params.push(data.inodes || 0);
+      }
+      if (colExpiry && typeof data.expiry_date !== 'undefined') {
+        sets.push(`\`${colExpiry}\` = ?`);
+        params.push(data.expiry_date || null);
+      }
+
+      if (!sets.length) {
+        return json(res, 400, { success: false, message: 'No updatable fields provided.' });
+      }
+
+      params.push(id);
+      const sql = `UPDATE websites SET ${sets.join(', ')} WHERE \`${colId}\` = ? LIMIT 1`;
+      await pool.query(sql, params);
+
+      return json(res, 200, { success: true });
+    } catch (e) {
+      console.error('Error updating website usage:', e);
+      return json(res, 500, { success: false, message: 'Database error while updating website usage.' });
+    }
+  }  
 
   return json(res, 400, { success: false, message: 'Invalid update action.' });
 }
