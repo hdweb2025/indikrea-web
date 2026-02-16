@@ -4,6 +4,7 @@
 # IDE and Editor folders
 .vscode/
 .trae/
+.vercel/
 
 # Temporary and session files
 *.session.sql
@@ -21,6 +22,7 @@ yarn-error.log*
 
 # Misc
 public_html/
+src/public/api/
 .env
 .env.local
 .env.*.local
