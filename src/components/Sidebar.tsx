@@ -11,6 +11,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, user, onLogout }) => {
     const { settings } = usePublicData();
+    const displayName = user.name || user.username || 'User';
     const navLinkClasses = "flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors duration-200";
     const activeLinkClasses = "bg-primary-600 text-white";
 
@@ -75,10 +76,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, user, onLogout }) => {
                 <div className="px-4 py-4 border-t border-gray-700">
                     <div className="flex items-center">
                         <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center font-bold">
-                            {user.name.charAt(0).toUpperCase()}
+                            {displayName.charAt(0).toUpperCase()}
                         </div>
                         <div className="ml-3">
-                            <p className="font-semibold text-sm">{user.name}</p>
+                            <p className="font-semibold text-sm">{displayName}</p>
                             <p className="text-xs text-gray-400 capitalize">{user.role}</p>
                         </div>
                     </div>
