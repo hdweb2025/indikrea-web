@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { parse as parseUrl } from 'url';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,6 +9,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// Enable CORS for all routes
+app.use(cors());
 
 // API routes
 app.use(express.json({ limit: '2mb' }));
