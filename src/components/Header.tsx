@@ -13,6 +13,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, user, onLogout }) => {
     const { theme, toggleTheme } = useTheme();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const navigate = useNavigate();
+    const displayName = user.name || user.username || 'User';
 
     return (
         <header className="bg-white dark:bg-gray-800 shadow-md h-16 flex-shrink-0 z-10">
@@ -33,13 +34,13 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, user, onLogout }) => {
                         )}
                     </button>
                     <div className="hidden md:flex items-center relative">
-                        <span className="text-sm font-medium mr-2">{user.name}</span>
+                        <span className="text-sm font-medium mr-2">{displayName}</span>
                         <button
                             onClick={() => setIsMenuOpen(prev => !prev)}
                             className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center font-bold text-white text-sm focus:outline-none"
                             aria-label="User menu"
                         >
-                            {user.name.charAt(0).toUpperCase()}
+                            {displayName.charAt(0).toUpperCase()}
                         </button>
                         {isMenuOpen && (
                             <div className="absolute right-0 top-10 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600">
