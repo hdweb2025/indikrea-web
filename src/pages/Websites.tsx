@@ -8,7 +8,7 @@ interface WebsitesProps {
 }
 
 const formatDiskUsage = (mb: number, decimals = 2) => {
-    if (mb <= 0) return '0 MiB';
+    if (typeof mb !== 'number' || isNaN(mb) || mb <= 0) return '0 MiB';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['MiB', 'GiB', 'TiB'];
@@ -18,6 +18,11 @@ const formatDiskUsage = (mb: number, decimals = 2) => {
     }
     
     const i = Math.floor(Math.log(mb) / Math.log(k));
+    
+    // Ensure index is within bounds
+    if (i < 0) return `${mb.toFixed(dm)} MiB`;
+    if (i >= sizes.length) return `${(mb / Math.pow(k, sizes.length - 1)).toFixed(dm)} ${sizes[sizes.length - 1]}`;
+
     return parseFloat((mb / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
