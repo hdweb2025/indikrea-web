@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../data/mockData';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -14,6 +14,18 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, user, onLogout }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const navigate = useNavigate();
     const displayName = user.name || user.username || 'User';
+    const menuRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (!isMenuOpen) return;
+        const handleClick = (e: MouseEvent) => {
+            if (!menuRef.current) return;
+            if (menuRef.current.contains(e.target as Node)) return;
+            setIsMenuOpen(false);
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [isMenuOpen]);
 
     return (
         <header className="bg-white dark:bg-gray-800 shadow-md h-16 flex-shrink-0 z-10">
@@ -33,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, user, onLogout }) => {
                             <i className="fas fa-moon text-xl text-gray-600"></i>
                         )}
                     </button>
-                    <div className="hidden md:flex items-center relative">
+                    <div className="hidden md:flex items-center relative" ref={menuRef}>
                         <span className="text-sm font-medium mr-2">{displayName}</span>
                         <button
                             onClick={() => setIsMenuOpen(prev => !prev)}
