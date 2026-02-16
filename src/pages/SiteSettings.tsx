@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SiteSettings, mockSiteSettings } from '../data/mockData';
 import { usePublicData } from '../contexts/PublicDataContext';
-import { API_BASE_URL } from '../utils/api';
+import { updateSiteSettings } from '../utils/api';
 
 const SiteSettingsPage: React.FC = () => {
     const { settings: initialSettings, loading } = usePublicData();
@@ -126,56 +126,14 @@ const SiteSettingsPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+        if (!settings) return;
         try {
-            // Prepare payload matching DB keys
-            const payload = {
-                siteName: settings.general.siteName,
-                heroTitle: settings.general.heroTitle,
-                heroSubtitle: settings.general.heroSubtitle,
-                heroButtonText: settings.general.heroButtonText,
-                
-                headerLinks: settings.navigation?.headerLinks || [],
-                
-                whatsappNumber: settings.contact?.whatsappNumber || '',
-                whatsappDefaultMessage: settings.contact?.whatsappDefaultMessage || '',
-                
-                footerSlogan: settings.footer?.slogan || '',
-                copyrightName: settings.footer?.copyrightName || '',
-                footerLinks: settings.footer?.linkColumns || [],
-                
-                packagesPageTitle: settings.packagesPage.title,
-                packagesPageSubtitle: settings.packagesPage.subtitle,
-                packagesFaq: settings.packagesPage.faq,
-            };
-
-            const userStr = localStorage.getItem('user');
-            if (!userStr) {
-                alert('You must be logged in to save settings.');
-                return;
-            }
-            const user = JSON.parse(userStr);
-
-            const response = await fetch(`${API_BASE_URL}/update_data.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'update_settings',
-                    user: user,
-                    payload: payload
-                })
-            });
-            const result = await response.json();
-            
-            if (result.success) {
-                alert('Site settings have been saved successfully!');
-                window.location.reload(); 
-            } else {
-                alert('Failed to save: ' + (result.message || 'Unknown error'));
-            }
-        } catch (error) {
+            await updateSiteSettings(settings);
+            alert('Site settings have been saved successfully!');
+            window.location.reload();
+        } catch (error: any) {
             console.error(error);
-            alert('Error saving settings. Check console for details.');
+            alert(error?.message || 'Error saving settings. Check console for details.');
         }
     };
 
