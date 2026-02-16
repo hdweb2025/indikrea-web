@@ -11,11 +11,17 @@ interface DashboardProps {
 }
 
 const formatBytes = (bytes: number, decimals = 2) => {
-    if (bytes === 0) return '0 MB';
+    if (typeof bytes !== 'number' || isNaN(bytes) || bytes <= 0) return '0 MB';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['MB', 'GB', 'TB'];
+    if (bytes < 1) return `${bytes.toFixed(dm)} MB`;
     const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    // Ensure index is within bounds
+    if (i < 0) return `${bytes.toFixed(dm)} MB`;
+    if (i >= sizes.length) return `${(bytes / Math.pow(k, sizes.length - 1)).toFixed(dm)} ${sizes[sizes.length - 1]}`;
+    
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
