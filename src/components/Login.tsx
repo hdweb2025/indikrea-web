@@ -34,7 +34,7 @@ const Login: React.FC<LoginProps> = ({ userType }) => {
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/update`, {
+            const response = await fetch(`${API_BASE_URL}/data`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
