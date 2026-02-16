@@ -53,7 +53,7 @@ const ClientEdit: React.FC = () => {
         e.preventDefault();
         try {
             const payload: Partial<Client> = {
-                id: isNewClient ? undefined : parseInt(clientId || '0'),
+                id: isNewClient ? undefined : parseInt(clientId || '0') || undefined,
                 name: client.name || '',
                 contact_person: client.contact_person || '',
                 email: client.email || '',
